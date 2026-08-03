@@ -15,3 +15,9 @@ frontend/.env
 # General
 .DS_Store
 *.log
+
+# Prisma AI assistant skill docs (auto-generated, not needed)
+backend/.agents/
+backend/.claude/
+backend/.windsurf/
+backend/skills-lock.json
