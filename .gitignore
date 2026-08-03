@@ -1,0 +1,16 @@
+# Python
+python-ai/venv/
+python-ai/__pycache__/
+python-ai/chroma_store/
+python-ai/uploads/
+python-ai/.env
+
+# Node
+backend/node_modules/
+frontend/node_modules/
+backend/.env
+frontend/.env
+
+# General
+.DS_Store
+*.log
