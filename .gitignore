@@ -21,3 +21,4 @@ backend/.agents/
 backend/.claude/
 backend/.windsurf/
 backend/skills-lock.json
+python-ai/temp_uploads/
