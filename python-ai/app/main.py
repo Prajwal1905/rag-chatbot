@@ -8,8 +8,13 @@ from typing import List, Optional
 from app.pdf_processor import load_and_split_pdf
 from app.rag import add_document_chunks, delete_document
 from app.graph import rag_graph
+from app.redis_listener import start_listener_in_thread
 
 app = FastAPI(title="RAG AI Service")
+
+@app.on_event("startup")
+def startup_event():
+    start_listener_in_thread()
 
 UPLOAD_DIR = "./uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
