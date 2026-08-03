@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Document {
+  id               String   @id @default(uuid())
+  fileName         String
+  uploadDate       DateTime @default(now())
+  processingStatus String   @default("pending")
+  chunksCreated    Int?
+}
+
+model Chat {
+  id        String   @id @default(uuid())
+  sessionId String
+  question  String
+  answer    String
+  timestamp DateTime @default(now())
+}
