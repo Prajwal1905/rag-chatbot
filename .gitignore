@@ -1,6 +1,7 @@
 # Python
 python-ai/venv/
-python-ai/__pycache__/
+**/__pycache__/
+*.pyc
 python-ai/chroma_store/
 python-ai/uploads/
 python-ai/.env
