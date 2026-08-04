@@ -1,0 +1,8 @@
+node_modules
+.env
+.claude
+.agents
+.windsurf
+skills-lock.json
+prisma/migrations/**/migration.sql.bak
+dist

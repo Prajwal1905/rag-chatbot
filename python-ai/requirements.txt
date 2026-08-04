@@ -3,6 +3,9 @@ uvicorn[standard]
 langchain
 langchain-community
 langchain-groq
+langchain-huggingface
+langchain-chroma
+langchain-text-splitters
 langgraph
 chromadb
 sentence-transformers
@@ -10,3 +13,4 @@ pypdf
 redis
 python-dotenv
 pydantic
+python-multipart

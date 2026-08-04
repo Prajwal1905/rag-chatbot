@@ -2,7 +2,7 @@ import base64
 import os
 import uuid
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 TEMP_DIR = "./temp_uploads"
 os.makedirs(TEMP_DIR, exist_ok=True)
