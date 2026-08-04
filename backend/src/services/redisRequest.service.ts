@@ -47,7 +47,7 @@ export async function sendAIRequest(
   const responsePromise = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       pendingRequests.delete(requestId);
-      reject(new Error('AI service timed out'));
+      reject(new Error('AI service timed out — please ensure python-ai is running and connected to Redis'));
     }, timeoutMs);
 
     pendingRequests.set(requestId, (value) => {

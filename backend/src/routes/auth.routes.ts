@@ -5,12 +5,18 @@ import prisma from '../config/prisma';
 
 const router = Router();
 
-// Register (only needed to create the first admin — assignment says "Admin Login", so this can be a one-time setup route)
 router.post('/register', async (req, res) => {
   try {
     const { email, password } = req.body;
+
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -33,6 +39,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
     }

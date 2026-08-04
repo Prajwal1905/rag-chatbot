@@ -8,14 +8,25 @@ router.post('/ask', async (req, res) => {
   try {
     const { question, sessionId, chatHistory } = req.body;
 
-    if (!question || !sessionId) {
-      return res.status(400).json({ error: 'question and sessionId are required' });
+    if (!question || typeof question !== 'string' || !question.trim()) {
+      return res.status(400).json({ error: 'question is required and cannot be empty' });
+    }
+    if (!sessionId || typeof sessionId !== 'string') {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+    if (question.length > 2000) {
+      return res.status(400).json({ error: 'question is too long (max 2000 characters)' });
     }
 
-    const aiResponse = await sendAIRequest('chat', {
-      question,
-      chatHistory: chatHistory || [],
-    });
+    let aiResponse;
+    try {
+      aiResponse = await sendAIRequest('chat', {
+        question,
+        chatHistory: chatHistory || [],
+      });
+    } catch (err) {
+      return res.status(503).json({ error: 'AI service unavailable or timed out' });
+    }
 
     if (aiResponse.error) {
       return res.status(500).json({ error: aiResponse.error });
@@ -36,12 +47,19 @@ router.post('/ask', async (req, res) => {
   }
 });
 
-
 router.post('/ask-stream', async (req, res) => {
   const { question, sessionId, chatHistory } = req.body;
 
-  if (!question || !sessionId) {
-    res.status(400).json({ error: 'question and sessionId are required' });
+  if (!question || typeof question !== 'string' || !question.trim()) {
+    res.status(400).json({ error: 'question is required and cannot be empty' });
+    return;
+  }
+  if (!sessionId || typeof sessionId !== 'string') {
+    res.status(400).json({ error: 'sessionId is required' });
+    return;
+  }
+  if (question.length > 2000) {
+    res.status(400).json({ error: 'question is too long (max 2000 characters)' });
     return;
   }
 
@@ -51,10 +69,17 @@ router.post('/ask-stream', async (req, res) => {
   res.flushHeaders();
 
   try {
-    const aiResponse = await sendAIRequest('chat', {
-      question,
-      chatHistory: chatHistory || [],
-    });
+    let aiResponse;
+    try {
+      aiResponse = await sendAIRequest('chat', {
+        question,
+        chatHistory: chatHistory || [],
+      });
+    } catch (err) {
+      res.write(`data: ${JSON.stringify({ type: 'error', error: 'AI service unavailable or timed out' })}\n\n`);
+      res.end();
+      return;
+    }
 
     if (aiResponse.error) {
       res.write(`data: ${JSON.stringify({ type: 'error', error: aiResponse.error })}\n\n`);
@@ -66,15 +91,13 @@ router.post('/ask-stream', async (req, res) => {
       data: { sessionId, question, answer: aiResponse.answer },
     });
 
-    
     const words = aiResponse.answer.split(' ');
     for (let i = 0; i < words.length; i++) {
       const chunk = (i === 0 ? '' : ' ') + words[i];
       res.write(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`);
-      await new Promise((r) => setTimeout(r, 30)); // typing speed
+      await new Promise((r) => setTimeout(r, 30));
     }
 
-    
     res.write(
       `data: ${JSON.stringify({
         type: 'done',
@@ -88,6 +111,20 @@ router.post('/ask-stream', async (req, res) => {
     console.error(err);
     res.write(`data: ${JSON.stringify({ type: 'error', error: 'Chat request failed' })}\n\n`);
     res.end();
+  }
+});
+
+router.get('/history/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const chats = await prisma.chat.findMany({
+      where: { sessionId },
+      orderBy: { timestamp: 'asc' },
+    });
+    res.json(chats);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch chat history' });
   }
 });
 

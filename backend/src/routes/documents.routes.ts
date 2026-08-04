@@ -6,10 +6,27 @@ import { authMiddleware } from '../middleware/auth.middleware';
 import fs from 'fs';
 
 const router = Router();
-const upload = multer({ dest: 'uploads/' });
+
+const upload = multer({
+  dest: 'uploads/',
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype !== 'application/pdf') {
+      return cb(new Error('Only PDF files are allowed'));
+    }
+    cb(null, true);
+  },
+});
 
 // Upload PDF
-router.post('/upload', authMiddleware, upload.single('file'), async (req, res) => {
+router.post('/upload', authMiddleware, (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || 'Upload error' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -22,17 +39,28 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
       },
     });
 
-    // Read file as base64 to send through Redis (no shared filesystem between services)
     const fileBuffer = fs.readFileSync(req.file.path);
     const fileBase64 = fileBuffer.toString('base64');
 
-    const aiResponse = await sendAIRequest('upload', {
-      documentId: document.id,
-      fileName: req.file.originalname,
-      fileBase64,
-    });
+    let aiResponse;
+    try {
+      aiResponse = await sendAIRequest('upload', {
+        documentId: document.id,
+        fileName: req.file.originalname,
+        fileBase64,
+      });
+    } catch (aiErr: any) {
+      fs.unlinkSync(req.file.path);
+      await prisma.document.update({
+        where: { id: document.id },
+        data: { processingStatus: 'failed' },
+      });
+      return res.status(503).json({
+        error: 'AI service is unavailable or timed out. Please ensure python-ai is running.',
+      });
+    }
 
-    fs.unlinkSync(req.file.path); // cleanup temp upload
+    fs.unlinkSync(req.file.path);
 
     if (aiResponse.error) {
       await prisma.document.update({
@@ -57,9 +85,15 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
   }
 });
 
-// List PDFs
+// List PDFs (with optional search)
 router.get('/', authMiddleware, async (req, res) => {
-  const documents = await prisma.document.findMany({ orderBy: { uploadDate: 'desc' } });
+  const { search } = req.query;
+  const documents = await prisma.document.findMany({
+    where: search
+      ? { fileName: { contains: String(search), mode: 'insensitive' } }
+      : undefined,
+    orderBy: { uploadDate: 'desc' },
+  });
   res.json(documents);
 });
 
@@ -68,7 +102,16 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
 
-    await sendAIRequest('delete', { documentId: id });
+    const existing = await prisma.document.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    try {
+      await sendAIRequest('delete', { documentId: id });
+    } catch (aiErr) {
+      console.warn('AI service unreachable during delete, removing from DB anyway');
+    }
 
     await prisma.document.delete({ where: { id } });
     res.json({ status: 'deleted' });
@@ -78,16 +121,17 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Reprocess PDF (re-trigger embedding — simple version: mark for reprocessing)
 router.post('/:id/reprocess', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
+    const existing = await prisma.document.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
     await prisma.document.update({
       where: { id },
       data: { processingStatus: 'processing' },
     });
-    // In a full implementation, you'd re-fetch the original file and resend to AI service.
-    // For now this marks status; extend later if time permits.
     res.json({ status: 'reprocessing_triggered' });
   } catch (err) {
     res.status(500).json({ error: 'Reprocess failed' });

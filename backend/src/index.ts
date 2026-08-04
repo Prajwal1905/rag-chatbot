@@ -18,6 +18,10 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/stats', statsRoutes);
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
 const PORT = process.env.PORT || 5000;
 
 async function start() {
