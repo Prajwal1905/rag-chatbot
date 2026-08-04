@@ -22,6 +22,7 @@ Python AI Service (8000)
         |
    PostgreSQL (5433) <- metadata: Users, Documents, Chats
 ```
+![Architecture Diagram](./docs/architecture-diagram.png)
 
 The Node backend and Python AI service never talk directly. Every AI request (chat, PDF upload, PDF delete) is published to Redis on the `ai:request` channel, processed by the Python service, and the result is published back on `ai:response`, matched by a unique request ID.
 
