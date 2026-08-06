@@ -2,6 +2,10 @@
 
 A microservice-based AI chatbot where an admin uploads PDF documents that become the knowledge base, and users can ask questions through a public chat interface. Built with a Next.js frontend, Node.js/Express backend, and a Python FastAPI AI service communicating via Redis Pub/Sub.
 
+## Demo Video
+
+[Watch the demo video](https://drive.google.com/file/d/119Np54N3p7LsH5aK1F_JpjhBa3Dcvnkr/view?usp=sharing)
+
 ## Architecture
 
 ```
